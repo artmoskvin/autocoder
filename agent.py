@@ -2,14 +2,15 @@ import ast
 from dataclasses import dataclass
 from typing import List
 
-import rich
 import typer
-from rich.prompt import Prompt
+from langchain.schema import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
 from ai import AI
-from chat import format_message, format_prompt, ChatLikePrompt
-from project import Project
-from prompts.planning import questions_prompt, plan_prompt
+from chat import print_msg, ask_approval, prompt
+from parser import to_files
+from project import Project, File
+from prompts.coding import CODING_TASK_PROMPT
+from prompts.planning import SYSTEM_PROMPT, PLAN_PROMPT, QUESTIONS_PROMPT
 
 
 @dataclass
@@ -22,60 +23,97 @@ class Message:
 
 
 class CodingAgent:
-    def __init__(self, ai: AI, project: Project):
+    def __init__(self, ai: AI, project: Project, chat: List[BaseMessage]):
         self.ai = ai
         self.project = project
+        self.chat = chat
 
     def run(self, task: str):
-        plan = self.generate_plan(task)
+        self.chat.extend([SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=task)])
+        plan = self.generate_plan()
         if not plan:
-            rich.print(format_message("Could not create a plan :person_facepalming:"))
+            print_msg("Could not create a plan :person_facepalming:")
             raise typer.Abort()
 
-        rich.print(format_message("Plan created :party_popper:"))
+        files = self.generate_code(plan)
+        if not files:
+            print_msg("Could not write code :person_facepalming:")
+            raise typer.Abort()
+
+        self.project.write_files(files)
+
+        print_msg("Code created :party_popper:")
         raise typer.Exit()
 
-        # files = self.generate_code(plan)
-        # self.project.write_files(files)
-        # self.update_tests()
-
-    def generate_plan(self, task: str) -> str:
-        rich.print(format_message("Drafting a plan... :writing_hand:"))
+    def generate_plan(self) -> str:
+        print_msg("Drafting a plan... :writing_hand:")
         plan = None
         approved = False
-        chat = [Message(user="Client", message=task)]
         while not approved:
-            questions = self.generate_questions(chat)
+            questions = self.generate_questions()
             if questions:
-                rich.print(format_message("Before we proceed there are a few things I need to clarify"))
-                qa_history = self.ask_questions(questions)
-                chat.extend(qa_history)
+                print_msg("Before we proceed there are a few things I need to clarify")
+                self.ask_questions(questions)
 
-            rich.print(format_message("Thank you for answering :folded_hands:"))
-            plan = self.generate_plan_from_chat(chat)
-            rich.print(format_message("Here's what I propose"))
-            rich.print(format_message(plan))
-            approved = ChatLikePrompt.ask(format_message("Do you approve this plan?"))
+            print_msg("Thank you for answering :folded_hands:")
+            plan = self.generate_plan_from_chat()
+
+            plan_msg = f"Here's what I propose\n\n{plan}"
+            self.chat.append(AIMessage(content=plan_msg))
+            print_msg(plan_msg)
+
+            ask_approval_msg = "Do you approve this plan?"
+            self.chat.append(AIMessage(content=ask_approval_msg))
+            approved = ask_approval(ask_approval_msg)
+
             if not approved:
-                chat.append(Prompt.ask(format_prompt("What would you like to add?")))
+                ask_feedback_msg = "What would you like to add?"
+                self.chat.extend([AIMessage(content=ask_feedback_msg),
+                                  HumanMessage(content=prompt(ask_feedback_msg))])
 
         return plan
 
-    def generate_questions(self, chat: List[Message]) -> List[str]:
-        prompt = questions_prompt.format(chat_history="\n".join([str(message) for message in chat]))
-        questions_str = self.ai.call(prompt)
+    def generate_questions(self) -> List[str]:
+        self.chat.append(SystemMessage(content=QUESTIONS_PROMPT))
+        questions_str = self.ai.call(self.chat)
         return ast.literal_eval(questions_str)
 
-    def generate_plan_from_chat(self, chat: List[Message]) -> str:
-        prompt = plan_prompt.format(chat_history="\n".join([str(message) for message in chat]))
-        rich.print(format_message("Thinking... :thinking_face:"))
-        return self.ai.call(prompt)
+    def generate_plan_from_chat(self) -> str:
+        self.chat.append(SystemMessage(content=PLAN_PROMPT))
+        print_msg("Thinking... :thinking_face:")
+        return self.ai.call(self.chat)
 
-    def ask_questions(self, questions: List[str]) -> List[Message]:
-        chat_history: List[Message] = []
+    def ask_questions(self, questions: List[str]) -> None:
         while questions:
             q = questions.pop(0)
-            chat_history.append(Message(user="You", message=q))
-            answer = Prompt.ask(format_prompt(q))
-            chat_history.append(Message(user="Client", message=answer))
-        return chat_history
+            self.chat.append(AIMessage(content=q))
+            answer = prompt(q)
+            self.chat.append(HumanMessage(content=answer))
+
+    def generate_code(self, plan: str) -> List[File]:
+        approved = False
+        files = None
+        messages = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=f"Plan: {plan}"),
+                    HumanMessage(content=CODING_TASK_PROMPT)]
+        while not approved:
+            code_str = self.ai.call(messages)
+            files = to_files(code_str)
+            self.project.add_files(files)
+            files_str = "\n\n".join(list(str(file) for file in files))
+
+            proposal = f"Here's what I propose.\n\n{files_str}\n\n"
+            messages.append(AIMessage(content=proposal))
+            print_msg(proposal)
+
+            approval_msg = "Does that make sense?"
+            messages.append(AIMessage(content=approval_msg))
+            approved = ask_approval(approval_msg)
+
+            if not approved:
+                feedback_msg = "What would you like to add or change?"
+                messages.append(AIMessage(content=feedback_msg))
+                feedback = prompt(feedback_msg)
+                messages.append(HumanMessage(content=feedback))
+
+        self.project.commit()
+        return files
