@@ -1,17 +1,26 @@
+import logging
+import os
 import random
 from typing import Annotated
 
 import typer
+from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
 from rich.prompt import Prompt
 
 from agent import CodingAgent
 from ai import AI
-from chat import format_message, format_prompt
+from chat import format_prompt
 from db import DB
 from project import Project
 
-OPENAI_API_KEY = ""
+logging.basicConfig(level=logging.INFO)
+
+load_dotenv()
+
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+
+TEMPERATURE = 0
 
 PROMPTS = [
     "What's on the horizon?",
@@ -30,9 +39,9 @@ PROMPTS = [
 def main(project_path: str, model: Annotated[str, typer.Option(help="AI model")] = "gpt-4"):
     db = DB(project_path)
     project = Project(db)
-    ai_model = ChatOpenAI(model_name=model, openai_api_key=OPENAI_API_KEY)
+    ai_model = ChatOpenAI(model_name=model, openai_api_key=OPENAI_API_KEY, temperature=TEMPERATURE)
     ai = AI(ai_model)
-    agent = CodingAgent(ai, project)
+    agent = CodingAgent(ai, project, [])
 
     prompt = random.choice(PROMPTS)
     task = Prompt.ask(format_prompt(prompt=prompt))

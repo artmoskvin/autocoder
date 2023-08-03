@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Dict
 
 from db import DB
 
@@ -9,10 +9,14 @@ class File:
     path: str
     content: str
 
+    def __str__(self):
+        return f"{self.path}\n```{self.content}```"
+
 
 class Project:
     def __init__(self, db: DB):
         self.db = db
+        self.staging: Dict[str, File] = {}
 
     def run(self) -> None:
         pass
@@ -26,11 +30,24 @@ class Project:
     def read_files(self, paths: List[str]) -> List[File]:
         pass
 
-    def write_file(self, file: File) -> bool:
-        pass
+    def write_file(self, file: File) -> None:
+        self.db[file.path] = file.content
 
-    def write_files(self, files: List[File]) -> bool:
-        pass
+    def write_files(self, files: List[File]) -> None:
+        for file in files:
+            self.write_file(file)
+
+    def add_file(self, file: File) -> None:
+        self.staging[file.path] = file
+
+    def add_files(self, files: List[File]) -> None:
+        for file in files:
+            self.add_file(file)
+
+    def commit(self) -> None:
+        for file in self.staging.values():
+            self.write_file(file)
+        self.staging = {}
 
     def test_entrypoint(self) -> File:
         pass
