@@ -8,7 +8,8 @@ from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
 from rich.prompt import Prompt
 
-from agent import CodingAgent
+from agent.code import CodeGenerator
+from agent.orchestrator import Orchestrator
 from ai import AI
 from chat import format_prompt
 from db import DB
@@ -19,6 +20,8 @@ logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+
+MODEL = "gpt-4"
 
 TEMPERATURE = 0
 
@@ -36,17 +39,19 @@ PROMPTS = [
 ]
 
 
-def main(project_path: str, model: Annotated[str, typer.Option(help="AI model")] = "gpt-4"):
+def main(project_path: str, model: Annotated[str, typer.Option(help="AI model")] = MODEL):
     db = DB(project_path)
     project = Project(db)
     ai_model = ChatOpenAI(model_name=model, openai_api_key=OPENAI_API_KEY, temperature=TEMPERATURE)
     ai = AI(ai_model)
-    agent = CodingAgent(ai, project, [])
+    code_generator = CodeGenerator(ai, project)
+    orchestrator = Orchestrator(ai, project, [], code_generator)
 
-    prompt = random.choice(PROMPTS)
-    task = Prompt.ask(format_prompt(prompt=prompt))
+    while True:
+        prompt = random.choice(PROMPTS)
+        task = Prompt.ask(format_prompt(prompt=prompt))
 
-    agent.run(task)
+        orchestrator.run(task)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,10 @@
+import logging
 import re
 from typing import List
 
 from project import File
+
+logger = logging.getLogger(__name__)
 
 
 def to_files(text: str) -> List[File]:
@@ -25,6 +28,11 @@ def to_files(text: str) -> List[File]:
 
         # Get the code
         code = match.group(2)
+
+        # Ignore empty directories
+        if path.endswith("/"):
+            logger.warning(f"Invalid filename {path} with content {code}. File ignored.")
+            continue
 
         # Add the file to the list
         files.append(File(path=path, content=code))

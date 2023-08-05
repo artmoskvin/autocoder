@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import List, Tuple
 
 
 class DB:
@@ -35,3 +36,10 @@ class DB:
         else:
             # If val is neither a string nor bytes, raise an error.
             raise TypeError("val must be either a str or bytes")
+
+    def is_empty(self) -> bool:
+        return not any(self.path.iterdir())
+
+    def list(self) -> List[Tuple[str, str]]:
+        return [(str(file.relative_to(self.path)), self[str(file.relative_to(self.path))]) for file in
+                self.path.rglob('*') if file.is_file()]
