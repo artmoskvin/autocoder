@@ -5,12 +5,12 @@ from typing import List
 import typer
 from langchain.schema import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
+from agent.code import CodeGenerator
 from ai import AI
 from chat import print_msg, ask_approval, prompt
-from parser import to_files
-from project import Project, File
-from prompts.coding import CODING_TASK_PROMPT
-from prompts.planning import SYSTEM_PROMPT, PLAN_PROMPT, QUESTIONS_PROMPT
+from project import Project
+from prompts.planning import PLAN_PROMPT, QUESTIONS_PROMPT
+from prompts.system import SYSTEM_PROMPT, project_prompt
 
 
 @dataclass
@@ -22,31 +22,42 @@ class Message:
         return f"{self.user}: '{self.message}'"
 
 
-class CodingAgent:
-    def __init__(self, ai: AI, project: Project, chat: List[BaseMessage]):
+class Orchestrator:
+    def __init__(self, ai: AI, project: Project, chat: List[BaseMessage], code_generator: CodeGenerator):
         self.ai = ai
         self.project = project
         self.chat = chat
+        self.code_generator = code_generator
 
-    def run(self, task: str):
-        self.chat.extend([SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=task)])
+    def run(self, task: str) -> None:
+        messages = self.init_messages(task)
+        self.chat.extend(messages)
         plan = self.generate_plan()
         if not plan:
             print_msg("Could not create a plan :person_facepalming:")
             raise typer.Abort()
 
-        files = self.generate_code(plan)
+        files = self.code_generator.generate_code(plan)
         if not files:
             print_msg("Could not write code :person_facepalming:")
             raise typer.Abort()
 
         self.project.write_files(files)
 
-        print_msg("Code created :party_popper:")
-        raise typer.Exit()
+        print_msg("Work complete :party_popper:")
+
+    def init_messages(self, task):
+        if self.project.is_empty():
+            messages = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=task)]
+        else:
+            files = self.project.read_all_files()
+            files_str = "\n".join(str(file) for file in files)
+            messages = [SystemMessage(content=SYSTEM_PROMPT),
+                        SystemMessage(content=project_prompt.format(files=files_str)),
+                        HumanMessage(content=task)]
+        return messages
 
     def generate_plan(self) -> str:
-        print_msg("Drafting a plan... :writing_hand:")
         plan = None
         approved = False
         while not approved:
@@ -55,7 +66,6 @@ class CodingAgent:
                 print_msg("Before we proceed there are a few things I need to clarify")
                 self.ask_questions(questions)
 
-            print_msg("Thank you for answering :folded_hands:")
             plan = self.generate_plan_from_chat()
 
             plan_msg = f"Here's what I propose\n\n{plan}"
@@ -75,6 +85,7 @@ class CodingAgent:
 
     def generate_questions(self) -> List[str]:
         self.chat.append(SystemMessage(content=QUESTIONS_PROMPT))
+        print_msg("Thinking... :thinking_face:")
         questions_str = self.ai.call(self.chat)
         return ast.literal_eval(questions_str)
 
@@ -89,31 +100,3 @@ class CodingAgent:
             self.chat.append(AIMessage(content=q))
             answer = prompt(q)
             self.chat.append(HumanMessage(content=answer))
-
-    def generate_code(self, plan: str) -> List[File]:
-        approved = False
-        files = None
-        messages = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=f"Plan: {plan}"),
-                    HumanMessage(content=CODING_TASK_PROMPT)]
-        while not approved:
-            code_str = self.ai.call(messages)
-            files = to_files(code_str)
-            self.project.add_files(files)
-            files_str = "\n\n".join(list(str(file) for file in files))
-
-            proposal = f"Here's what I propose.\n\n{files_str}\n\n"
-            messages.append(AIMessage(content=proposal))
-            print_msg(proposal)
-
-            approval_msg = "Does that make sense?"
-            messages.append(AIMessage(content=approval_msg))
-            approved = ask_approval(approval_msg)
-
-            if not approved:
-                feedback_msg = "What would you like to add or change?"
-                messages.append(AIMessage(content=feedback_msg))
-                feedback = prompt(feedback_msg)
-                messages.append(HumanMessage(content=feedback))
-
-        self.project.commit()
-        return files

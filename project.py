@@ -30,6 +30,9 @@ class Project:
     def read_files(self, paths: List[str]) -> List[File]:
         pass
 
+    def read_all_files(self) -> List[File]:
+        return [File(path, content) for path, content in self.db.list()]
+
     def write_file(self, file: File) -> None:
         self.db[file.path] = file.content
 
@@ -48,6 +51,9 @@ class Project:
         for file in self.staging.values():
             self.write_file(file)
         self.staging = {}
+
+    def is_empty(self) -> bool:
+        return self.db.is_empty()
 
     def test_entrypoint(self) -> File:
         pass
