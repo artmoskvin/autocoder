@@ -1,5 +1,6 @@
 from typing import List
 
+import typer
 from langchain.schema import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
 from ai import AI
@@ -15,8 +16,13 @@ class CodeGenerator:
         self.ai = ai
         self.project = project
 
-    def run(self):
-        pass
+    def run(self, plan: str) -> None:
+        files = self.generate_code(plan)
+        if not files:
+            print_msg("Could not write code :person_facepalming:")
+            raise typer.Abort()
+
+        self.project.write_files(files)
 
     def generate_code(self, plan: str) -> List[File]:
         approved = False

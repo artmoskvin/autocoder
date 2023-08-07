@@ -21,9 +21,6 @@ class Project:
     def run(self) -> None:
         pass
 
-    def run_tests(self) -> None:
-        pass
-
     def read_file(self, path) -> File:
         pass
 
@@ -55,8 +52,14 @@ class Project:
     def is_empty(self) -> bool:
         return self.db.is_empty()
 
-    def test_entrypoint(self) -> File:
-        pass
+    @property
+    def test_entrypoint(self) -> str:
+        # static for now
+        return "run_tests.sh"
+
+    @property
+    def root(self) -> str:
+        return self.db.path
 
     def entrypoint(self) -> File:
         pass

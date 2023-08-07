@@ -41,5 +41,26 @@ class DB:
         return not any(self.path.iterdir())
 
     def list(self) -> List[Tuple[str, str]]:
-        return [(str(file.relative_to(self.path)), self[str(file.relative_to(self.path))]) for file in
-                self.path.rglob('*') if file.is_file()]
+        files = []
+        for file in self.path.rglob('*'):
+            if file.is_file():
+                # Skip directories like "__pycache__"
+                if any(part.startswith('__') for part in file.parts):
+                    continue
+
+                # Skip directories like ".pytest_cache"
+                if any(part.startswith('.') for part in file.parts):
+                    continue
+
+                # Skip directories like "venv"
+                if any(part == 'venv' for part in file.parts):
+                    continue
+
+                files.append((self.__get_relative_path(file), self.__get_file_content(file)))
+        return files
+
+    def __get_file_content(self, file: Path):
+        return self[self.__get_relative_path(file)]
+
+    def __get_relative_path(self, path: Path):
+        return str(path.relative_to(self.path))

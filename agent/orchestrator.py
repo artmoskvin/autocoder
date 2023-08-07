@@ -1,48 +1,47 @@
 import ast
-from dataclasses import dataclass
 from typing import List
 
 import typer
 from langchain.schema import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
 from agent.code import CodeGenerator
+from agent.qa import QA, Success, Failure
 from ai import AI
 from chat import print_msg, ask_approval, prompt
 from project import Project
 from prompts.planning import PLAN_PROMPT, QUESTIONS_PROMPT
+from prompts.qa import fix_it_prompt
 from prompts.system import SYSTEM_PROMPT, project_prompt
 
 
-@dataclass
-class Message:
-    user: str
-    message: str
-
-    def __str__(self):
-        return f"{self.user}: '{self.message}'"
-
-
 class Orchestrator:
-    def __init__(self, ai: AI, project: Project, chat: List[BaseMessage], code_generator: CodeGenerator):
+    def __init__(self, ai: AI, project: Project, chat: List[BaseMessage], code_generator: CodeGenerator, qa: QA):
         self.ai = ai
         self.project = project
         self.chat = chat
         self.code_generator = code_generator
+        self.qa = qa
 
     def run(self, task: str) -> None:
-        messages = self.init_messages(task)
-        self.chat.extend(messages)
-        plan = self.generate_plan()
-        if not plan:
-            print_msg("Could not create a plan :person_facepalming:")
-            raise typer.Abort()
+        qa_passed = False
 
-        files = self.code_generator.generate_code(plan)
-        if not files:
-            print_msg("Could not write code :person_facepalming:")
-            raise typer.Abort()
+        while not qa_passed:
+            messages = self.init_messages(task)
+            self.chat.extend(messages)
+            plan = self.generate_plan()
+            if not plan:
+                print_msg("Could not create a plan :person_facepalming:")
+                raise typer.Abort()
 
-        self.project.write_files(files)
+            self.code_generator.run(plan)
+
+            result = self.qa.run_tests()
+
+            match result:
+                case Success():
+                    qa_passed = True
+                case Failure(details):
+                    task = fix_it_prompt.format(test_run_details=details)
 
         print_msg("Work complete :party_popper:")
 
