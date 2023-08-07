@@ -10,6 +10,7 @@ from rich.prompt import Prompt
 
 from agent.code import CodeGenerator
 from agent.orchestrator import Orchestrator
+from agent.qa import QA
 from ai import AI
 from chat import format_prompt
 from db import DB
@@ -45,7 +46,8 @@ def main(project_path: str, model: Annotated[str, typer.Option(help="AI model")]
     ai_model = ChatOpenAI(model_name=model, openai_api_key=OPENAI_API_KEY, temperature=TEMPERATURE)
     ai = AI(ai_model)
     code_generator = CodeGenerator(ai, project)
-    orchestrator = Orchestrator(ai, project, [], code_generator)
+    qa = QA(project)
+    orchestrator = Orchestrator(ai, project, [], code_generator, qa)
 
     while True:
         prompt = random.choice(PROMPTS)
