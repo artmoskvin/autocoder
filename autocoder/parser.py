@@ -2,7 +2,7 @@ import logging
 import re
 from typing import List
 
-from project import File
+from autocoder.project import File
 
 logger = logging.getLogger(__name__)
 

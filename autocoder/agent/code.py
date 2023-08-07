@@ -3,12 +3,12 @@ from typing import List
 import typer
 from langchain.schema import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
-from ai import AI
-from chat import print_msg, ask_approval, prompt
-from parser import to_files
-from project import Project, File
-from prompts.coding import CODING_TASK_PROMPT
-from prompts.system import SYSTEM_PROMPT, project_prompt
+from autocoder.ai import AI
+from autocoder.chat import print_msg, ask_approval, prompt
+from autocoder.parser import to_files
+from autocoder.project import Project, File
+from autocoder.prompts.coding import CODING_TASK_PROMPT
+from autocoder.prompts.system import SYSTEM_PROMPT, project_prompt
 
 
 class CodeGenerator:

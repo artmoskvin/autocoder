@@ -8,13 +8,13 @@ from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
 from rich.prompt import Prompt
 
-from agent.code import CodeGenerator
-from agent.orchestrator import Orchestrator
-from agent.qa import QA
-from ai import AI
-from chat import format_prompt
-from db import DB
-from project import Project
+from autocoder.agent.code import CodeGenerator
+from autocoder.agent.orchestrator import Orchestrator
+from autocoder.agent.qa import QA
+from autocoder.ai import AI
+from autocoder.chat import format_prompt
+from autocoder.db import DB
+from autocoder.project import Project
 
 logging.basicConfig(level=logging.INFO)
 
@@ -25,6 +25,8 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 MODEL = "gpt-4"
 
 TEMPERATURE = 0
+
+DEFAULT_PATH = "."
 
 PROMPTS = [
     "What's on the horizon?",
@@ -39,8 +41,12 @@ PROMPTS = [
     "Rolling forward, what's up next?"
 ]
 
+app = typer.Typer()
 
-def main(project_path: str, model: Annotated[str, typer.Option(help="AI model")] = MODEL):
+
+@app.command()
+def main(project_path: Annotated[str, typer.Argument()] = DEFAULT_PATH,
+         model: Annotated[str, typer.Option(help="AI model")] = MODEL):
     db = DB(project_path)
     project = Project(db)
     ai_model = ChatOpenAI(model_name=model, openai_api_key=OPENAI_API_KEY, temperature=TEMPERATURE)
@@ -54,7 +60,3 @@ def main(project_path: str, model: Annotated[str, typer.Option(help="AI model")]
         task = Prompt.ask(format_prompt(prompt=prompt))
 
         orchestrator.run(task)
-
-
-if __name__ == "__main__":
-    typer.run(main)
