@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Dict
 
-from db import DB
+from autocoder.db import DB
 
 
 @dataclass

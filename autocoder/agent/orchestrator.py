@@ -4,14 +4,14 @@ from typing import List
 import typer
 from langchain.schema import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
-from agent.code import CodeGenerator
-from agent.qa import QA, Success, Failure
-from ai import AI
-from chat import print_msg, ask_approval, prompt
-from project import Project
-from prompts.planning import PLAN_PROMPT, QUESTIONS_PROMPT
-from prompts.qa import fix_it_prompt
-from prompts.system import SYSTEM_PROMPT, project_prompt
+from autocoder.agent.code import CodeGenerator
+from autocoder.agent.qa import QA, Success, Failure
+from autocoder.ai import AI
+from autocoder.chat import print_msg, ask_approval, prompt
+from autocoder.project import Project
+from autocoder.prompts.planning import PLAN_PROMPT, QUESTIONS_PROMPT
+from autocoder.prompts.qa import fix_it_prompt
+from autocoder.prompts.system import SYSTEM_PROMPT, project_prompt
 
 
 class Orchestrator:

@@ -3,7 +3,7 @@ import os
 import subprocess
 from dataclasses import dataclass
 
-from project import Project
+from autocoder.project import Project
 
 logger = logging.getLogger(__name__)
 
