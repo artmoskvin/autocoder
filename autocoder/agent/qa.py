@@ -3,6 +3,7 @@ import os
 import subprocess
 from dataclasses import dataclass
 
+from autocoder.chat import print_msg
 from autocoder.project import Project
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,7 @@ class QA:
         self.project = project
 
     def run_tests(self) -> TestResult:
+        print_msg("Running tests...")
         os.chdir(str(self.project.root))
         process = subprocess.run(["bash", self.project.test_entrypoint], capture_output=True, text=True)
 

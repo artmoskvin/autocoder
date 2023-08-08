@@ -10,6 +10,7 @@ from rich.prompt import Prompt
 
 from autocoder.agent.code import CodeGenerator
 from autocoder.agent.orchestrator import Orchestrator
+from autocoder.agent.plan import Planner
 from autocoder.agent.qa import QA
 from autocoder.ai import AI
 from autocoder.chat import format_prompt
@@ -51,9 +52,10 @@ def main(project_path: Annotated[str, typer.Argument()] = DEFAULT_PATH,
     project = Project(db)
     ai_model = ChatOpenAI(model_name=model, openai_api_key=OPENAI_API_KEY, temperature=TEMPERATURE)
     ai = AI(ai_model)
+    planner = Planner(ai, project)
     code_generator = CodeGenerator(ai, project)
     qa = QA(project)
-    orchestrator = Orchestrator(ai, project, [], code_generator, qa)
+    orchestrator = Orchestrator(planner, code_generator, qa)
 
     while True:
         prompt = random.choice(PROMPTS)
