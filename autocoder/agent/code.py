@@ -20,7 +20,7 @@ class CodeGenerator:
         files = self.generate_code(plan)
         if not files:
             print_msg("Could not write code :person_facepalming:")
-            raise typer.Abort()
+            return
 
         self.project.write_files(files)
 
