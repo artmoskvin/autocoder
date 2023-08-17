@@ -1,4 +1,8 @@
+import os
+import subprocess
 from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
 from typing import List, Dict
 
 from autocoder.db import DB
@@ -11,6 +15,10 @@ class File:
 
     def __str__(self):
         return f"{self.path}\n```{self.content}```"
+
+
+class ProjectType(str, Enum):
+    python = "python"
 
 
 class Project:
@@ -65,4 +73,38 @@ class Project:
         pass
 
     def deploy(self) -> bool:
+        pass
+
+
+class ProjectFactory:
+    PROJECT_BASE_DIR = "/Users/artemm/Code/autocoder-projects"
+
+    @classmethod
+    def create(cls, project_type: ProjectType, name: str) -> Project:
+        match project_type:
+            case ProjectType.python:
+                return cls.__create_python_project(name)
+            case _:
+                raise NotImplementedError(f"Project type {project_type} is not supported")
+
+    @classmethod
+    def __create_python_project(cls, name: str) -> Project:
+        """
+        1. if not python, exit
+        2. create new poetry project
+        3. create new DB for the new dir
+        4. create new Project with db
+        """
+        os.makedirs(cls.PROJECT_BASE_DIR, exist_ok=True)
+        # os.chdir(cls.PROJECT_BASE_DIR)
+        process = subprocess.run(["poetry", "new", name], capture_output=True, text=True)
+
+        if process.returncode:
+            stdout_logs = f"Test run stdout:\n{process.stdout}"
+            stderr_logs = f"Test run stderr:\n{process.stderr}"
+            returncode_logs = f"Test run returncode: {process.returncode}"
+
+        logger.info(stdout_logs)
+        logger.info(stderr_logs)
+        logger.info(returncode_logs)
         pass

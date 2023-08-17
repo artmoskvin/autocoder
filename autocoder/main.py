@@ -1,7 +1,7 @@
 import logging
 import os
 import random
-from typing import Annotated
+from typing import Annotated, Optional
 
 import typer
 from dotenv import load_dotenv
@@ -16,6 +16,7 @@ from autocoder.ai import AI
 from autocoder.chat import format_prompt
 from autocoder.db import DB
 from autocoder.project import Project
+from autocoder.project import ProjectType
 
 logging.basicConfig(level=logging.INFO)
 
@@ -43,6 +44,24 @@ PROMPTS = [
 ]
 
 app = typer.Typer()
+
+
+@app.command()
+def new(project_type: Annotated[ProjectType, typer.Argument()], name: Annotated[Optional[str], typer.Option()] = None,
+        model: Annotated[str, typer.Option(help="AI model")] = MODEL):
+    project = Project.create(project_type, name)
+    ai_model = ChatOpenAI(model_name=model, openai_api_key=OPENAI_API_KEY, temperature=TEMPERATURE)
+    ai = AI(ai_model)
+    planner = Planner(ai, project)
+    code_generator = CodeGenerator(ai, project)
+    qa = QA(project)
+    orchestrator = Orchestrator(planner, code_generator, qa)
+
+    while True:
+        prompt = random.choice(PROMPTS)
+        task = Prompt.ask(format_prompt(prompt=prompt))
+
+        orchestrator.run(task)
 
 
 @app.command()
