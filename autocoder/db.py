@@ -1,5 +1,7 @@
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Callable
+
+from autocoder.project.model import File
 
 
 class DB:
@@ -40,27 +42,15 @@ class DB:
     def is_empty(self) -> bool:
         return not any(self.path.iterdir())
 
-    def list(self) -> List[Tuple[str, str]]:
+    def list(self, ignore: Callable[[Path], bool] = lambda p: False) -> List[File]:
         files = []
         for file in self.path.rglob('*'):
-            if file.is_file():
-                # Skip directories like "__pycache__"
-                if any(part.startswith('__') for part in file.parts):
-                    continue
-
-                # Skip directories like ".pytest_cache"
-                if any(part.startswith('.') for part in file.parts):
-                    continue
-
-                # Skip directories like "venv"
-                if any(part == 'venv' for part in file.parts):
-                    continue
-
-                files.append((self.__get_relative_path(file), self.__get_file_content(file)))
+            if file.is_file() and not ignore(file):
+                files.append(File(self.__get_relative_path(file), self.__get_file_content(file)))
         return files
 
-    def __get_file_content(self, file: Path):
+    def __get_file_content(self, file: Path) -> str:
         return self[self.__get_relative_path(file)]
 
-    def __get_relative_path(self, path: Path):
-        return str(path.relative_to(self.path))
+    def __get_relative_path(self, path: Path) -> Path:
+        return path.relative_to(self.path)

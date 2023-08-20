@@ -1,8 +1,9 @@
 import logging
 import re
+from pathlib import Path
 from typing import List
 
-from autocoder.project import File
+from autocoder.project.model import File
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ def to_files(text: str) -> List[File]:
             continue
 
         # Add the file to the list
-        files.append(File(path=path, content=code))
+        files.append(File(path=Path(path), content=code))
 
     # Return the files
     return files

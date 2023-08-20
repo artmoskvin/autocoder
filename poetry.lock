@@ -1143,6 +1143,20 @@ socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
+name = "wonderwords"
+version = "2.2.0"
+description = "A python package for random words and sentences in the english language"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "wonderwords-2.2.0-py3-none-any.whl", hash = "sha256:65fc665f1f5590e98f6d9259414ea036bf1b6dd83e51aa6ba44473c99ca92da1"},
+    {file = "wonderwords-2.2.0.tar.gz", hash = "sha256:0b7ec6f591062afc55603bfea71463afbab06794b3064d9f7b04d0ce251a13d0"},
+]
+
+[package.extras]
+cli = ["rich (==9.10.0)"]
+
+[[package]]
 name = "yarl"
 version = "1.9.2"
 description = "Yet another URL library"
@@ -1232,4 +1246,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "a316b3df77a2b1db427d566c5507cdd2f011bdc4f2725812456786cfa198b0f4"
+content-hash = "76fafab5bd4159a46189a43e13eb45f5b7e34ba303d816e58096a067fed48a84"
