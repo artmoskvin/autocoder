@@ -4,10 +4,10 @@ from typing import List
 from langchain.schema import SystemMessage, HumanMessage, AIMessage
 
 from autocoder.ai import AI
-from autocoder.chat import print_msg, ask_approval, prompt
-from autocoder.project import Project
+from autocoder.chat import print_autocoder_msg, ask_approval, prompt
+from autocoder.project.project import Project
 from autocoder.prompts.planning import QUESTIONS_PROMPT, PLAN_PROMPT
-from autocoder.prompts.system import SYSTEM_PROMPT, project_prompt
+from autocoder.prompts.system import project_prompt
 
 
 class Planner:
@@ -21,14 +21,16 @@ class Planner:
         return self.generate_plan()
 
     def init_messages(self, task):
-        if self.project.is_empty():
-            messages = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=task)]
-        else:
-            files = self.project.read_all_files()
-            files_str = "\n".join(str(file) for file in files)
-            messages = [SystemMessage(content=SYSTEM_PROMPT),
-                        SystemMessage(content=project_prompt.format(files=files_str)),
-                        HumanMessage(content=task)]
+        files = self.project.read_all_files()
+        files_str = "\n".join(str(file) for file in files)
+
+        source_code_path = self.project.source_code_path
+        tests_path = self.project.tests_path
+
+        messages = [SystemMessage(content=project_prompt.format(files=files_str, source_code_path=source_code_path,
+                                                                tests_path=tests_path)),
+                    HumanMessage(content=f"Task: {task}")]
+
         return messages
 
     def generate_plan(self) -> str:
@@ -37,14 +39,14 @@ class Planner:
         while not approved:
             questions = self.generate_questions()
             if questions:
-                print_msg("Before we proceed there are a few things I need to clarify")
+                print_autocoder_msg("Before we proceed there are a few things I need to clarify")
                 self.ask_questions(questions)
 
             plan = self.generate_plan_from_chat()
 
             plan_msg = f"Here's what I propose\n\n{plan}"
             self.chat.append(AIMessage(content=plan_msg))
-            print_msg(plan_msg)
+            print_autocoder_msg(plan_msg)
 
             ask_approval_msg = "Do you approve this plan?"
             self.chat.append(AIMessage(content=ask_approval_msg))
@@ -59,13 +61,13 @@ class Planner:
 
     def generate_questions(self) -> List[str]:
         self.chat.append(SystemMessage(content=QUESTIONS_PROMPT))
-        print_msg("Thinking... :thinking_face:")
+        print_autocoder_msg("Thinking... :thinking_face:")
         questions_str = self.ai.call(self.chat)
         return ast.literal_eval(questions_str)
 
     def generate_plan_from_chat(self) -> str:
         self.chat.append(SystemMessage(content=PLAN_PROMPT))
-        print_msg("Thinking... :thinking_face:")
+        print_autocoder_msg("Thinking... :thinking_face:")
         return self.ai.call(self.chat)
 
     def ask_questions(self, questions: List[str]) -> None:

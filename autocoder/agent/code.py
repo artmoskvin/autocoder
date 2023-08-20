@@ -1,14 +1,14 @@
 from typing import List
 
-import typer
 from langchain.schema import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
 from autocoder.ai import AI
-from autocoder.chat import print_msg, ask_approval, prompt
+from autocoder.chat import print_autocoder_msg, ask_approval, prompt
 from autocoder.parser import to_files
-from autocoder.project import Project, File
+from autocoder.project.model import File
+from autocoder.project.project import Project
 from autocoder.prompts.coding import CODING_TASK_PROMPT
-from autocoder.prompts.system import SYSTEM_PROMPT, project_prompt
+from autocoder.prompts.system import project_prompt
 
 
 class CodeGenerator:
@@ -19,7 +19,7 @@ class CodeGenerator:
     def run(self, plan: str) -> None:
         files = self.generate_code(plan)
         if not files:
-            print_msg("Could not write code :person_facepalming:")
+            print_autocoder_msg("Could not write code :person_facepalming:")
             return
 
         self.project.write_files(files)
@@ -36,7 +36,7 @@ class CodeGenerator:
 
             proposal = f"Here's what I propose.\n\n{files_str}\n\n"
             messages.append(AIMessage(content=proposal))
-            print_msg(proposal)
+            print_autocoder_msg(proposal)
 
             approval_msg = "Does that make sense?"
             messages.append(AIMessage(content=approval_msg))
@@ -52,15 +52,15 @@ class CodeGenerator:
         return files
 
     def init_messages(self, plan: str) -> List[BaseMessage]:
-        if self.project.is_empty():
-            messages = [SystemMessage(content=SYSTEM_PROMPT),
-                        HumanMessage(content=f"Plan: {plan}"),
-                        HumanMessage(content=CODING_TASK_PROMPT)]
-        else:
-            files = self.project.read_all_files()
-            files_str = "\n".join(str(file) for file in files)
-            messages = [SystemMessage(content=SYSTEM_PROMPT),
-                        SystemMessage(content=project_prompt.format(files=files_str)),
-                        HumanMessage(content=f"Plan: {plan}"),
-                        HumanMessage(content=CODING_TASK_PROMPT)]
+        files = self.project.read_all_files()
+        files_str = "\n".join(str(file) for file in files)
+
+        source_code_path = self.project.source_code_path
+        tests_path = self.project.tests_path
+
+        messages = [SystemMessage(content=project_prompt.format(files=files_str, source_code_path=source_code_path,
+                                                                tests_path=tests_path)),
+                    HumanMessage(content=f"Plan: {plan}"),
+                    HumanMessage(content=CODING_TASK_PROMPT)]
+
         return messages

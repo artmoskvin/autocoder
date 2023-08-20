@@ -7,16 +7,16 @@ import typer
 from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
 from rich.prompt import Prompt
+from wonderwords import RandomWord
 
 from autocoder.agent.code import CodeGenerator
 from autocoder.agent.orchestrator import Orchestrator
 from autocoder.agent.plan import Planner
-from autocoder.agent.qa import QA
 from autocoder.ai import AI
 from autocoder.chat import format_prompt
 from autocoder.db import DB
-from autocoder.project import Project
-from autocoder.project import ProjectType
+from autocoder.project.factory import ProjectFactory
+from autocoder.project.model import ProjectType
 
 logging.basicConfig(level=logging.INFO)
 
@@ -29,6 +29,8 @@ MODEL = "gpt-4"
 TEMPERATURE = 0
 
 DEFAULT_PATH = "."
+
+PROJECT_BASE_DIR = "/Users/artemm/Code/autocoder-projects"
 
 PROMPTS = [
     "What's on the horizon?",
@@ -45,17 +47,21 @@ PROMPTS = [
 
 app = typer.Typer()
 
+w = RandomWord()
+
+project_factory = ProjectFactory(PROJECT_BASE_DIR)
+
 
 @app.command()
 def new(project_type: Annotated[ProjectType, typer.Argument()], name: Annotated[Optional[str], typer.Option()] = None,
         model: Annotated[str, typer.Option(help="AI model")] = MODEL):
-    project = Project.create(project_type, name)
+    name = name or w.word(include_categories=["noun"])
+    project = project_factory.create(project_type, name)
     ai_model = ChatOpenAI(model_name=model, openai_api_key=OPENAI_API_KEY, temperature=TEMPERATURE)
     ai = AI(ai_model)
     planner = Planner(ai, project)
     code_generator = CodeGenerator(ai, project)
-    qa = QA(project)
-    orchestrator = Orchestrator(planner, code_generator, qa)
+    orchestrator = Orchestrator(planner, code_generator, project)
 
     while True:
         prompt = random.choice(PROMPTS)
@@ -67,17 +73,18 @@ def new(project_type: Annotated[ProjectType, typer.Argument()], name: Annotated[
 @app.command()
 def main(project_path: Annotated[str, typer.Argument()] = DEFAULT_PATH,
          model: Annotated[str, typer.Option(help="AI model")] = MODEL):
-    db = DB(project_path)
-    project = Project(db)
-    ai_model = ChatOpenAI(model_name=model, openai_api_key=OPENAI_API_KEY, temperature=TEMPERATURE)
-    ai = AI(ai_model)
-    planner = Planner(ai, project)
-    code_generator = CodeGenerator(ai, project)
-    qa = QA(project)
-    orchestrator = Orchestrator(planner, code_generator, qa)
-
-    while True:
-        prompt = random.choice(PROMPTS)
-        task = Prompt.ask(format_prompt(prompt=prompt))
-
-        orchestrator.run(task)
+    pass
+    # db = DB(project_path)
+    # project = Project(db)
+    # ai_model = ChatOpenAI(model_name=model, openai_api_key=OPENAI_API_KEY, temperature=TEMPERATURE)
+    # ai = AI(ai_model)
+    # planner = Planner(ai, project)
+    # code_generator = CodeGenerator(ai, project)
+    # qa = QA(project)
+    # orchestrator = Orchestrator(planner, code_generator, qa)
+    #
+    # while True:
+    #     prompt = random.choice(PROMPTS)
+    #     task = Prompt.ask(format_prompt(prompt=prompt))
+    #
+    #     orchestrator.run(task)

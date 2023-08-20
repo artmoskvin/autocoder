@@ -1,9 +1,13 @@
 from langchain import PromptTemplate
 
 FIX_IT_TEMPLATE = """\
-Test run failed with:
+Test run failed. Here are the logs.
 
-{test_run_details}
+Stdout:
+{stdout}
+
+Stderr:
+{stderr}
 
 Fix it.
 """
