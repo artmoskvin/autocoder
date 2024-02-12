@@ -1,5 +1,5 @@
 import ast
-from typing import List
+from typing import List, Generator
 
 from langchain.schema import SystemMessage, HumanMessage, AIMessage
 
@@ -62,13 +62,18 @@ class Planner:
     def generate_questions(self) -> List[str]:
         self.chat.append(SystemMessage(content=QUESTIONS_PROMPT))
         print_autocoder_msg("Thinking... :thinking_face:")
-        questions_str = self.ai.call(self.chat)
+        questions_str = "[]"
+        for partial_questions_str in self.ai.stream_call(self.chat):
+            questions_str = partial_questions_str
         return ast.literal_eval(questions_str)
 
     def generate_plan_from_chat(self) -> str:
         self.chat.append(SystemMessage(content=PLAN_PROMPT))
         print_autocoder_msg("Thinking... :thinking_face:")
-        return self.ai.call(self.chat)
+        plan = ""
+        for partial_plan in self.ai.stream_call(self.chat):
+            plan += partial_plan
+        return plan
 
     def ask_questions(self, questions: List[str]) -> None:
         while questions:
