@@ -20,3 +20,8 @@ class AI:
     def call(self, messages: List[BaseMessage]) -> str:
         print_system_msg(f"Calling AI with prompt:\n{pprint_messages(messages)}")
         return self.model(messages).content
+
+    def stream(self, messages: List[BaseMessage]) -> Iterator[BaseMessageChunk]:
+        print_system_msg(f"Streaming AI response for prompt:\n{pprint_messages(messages)}")
+        for chunk in self.model.stream(messages):
+            yield chunk
