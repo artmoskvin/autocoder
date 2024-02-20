@@ -2,21 +2,21 @@ f
 r
 o
 m
- 
+
 t
 y
 p
 i
 n
 g
- 
+
 i
 m
 p
 o
 r
 t
- 
+
 I
 t
 e
@@ -31,7 +31,7 @@ f
 r
 o
 m
- 
+
 l
 a
 n
@@ -48,14 +48,14 @@ h
 e
 m
 a
- 
+
 i
 m
 p
 o
 r
 t
- 
+
 B
 a
 s
@@ -94,3 +94,7 @@ class AI:
     def call(self, messages: List[BaseMessage]) -> str:
         print_system_msg(f"Calling AI with prompt:\n{pprint_messages(messages)}")
         return self.model(messages).content
+
+    def stream(self, messages: List[BaseMessage]) -> Iterator[BaseMessageChunk]:
+        print_system_msg(f"Streaming AI with prompt:\n{pprint_messages(messages)}")
+        return self.model.stream(messages)
