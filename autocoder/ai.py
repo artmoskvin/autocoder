@@ -1,5 +1,5 @@
 from typing import Iterator
-from langchain.schema import BaseMessageChunk
+from langchain.schema.messages import BaseMessageChunk
 import logging
 from typing import List
 
