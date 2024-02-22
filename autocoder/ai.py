@@ -1,3 +1,5 @@
+from typing import Iterator
+from langchain.schema.messages import BaseMessageChunk
 import logging
 from typing import List
 
@@ -20,3 +22,7 @@ class AI:
     def call(self, messages: List[BaseMessage]) -> str:
         print_system_msg(f"Calling AI with prompt:\n{pprint_messages(messages)}")
         return self.model(messages).content
+
+        def stream(self, messages: List[BaseMessage]) -> Iterator[str]:
+        print_system_msg(f"Streaming AI with prompt:\n{pprint_messages(messages)}")
+        return (chunk.content for chunk in self.model.stream(messages))
